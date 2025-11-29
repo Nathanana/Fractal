@@ -1,117 +1,85 @@
-#include "Shader.h"
+#include "shader.h"
+#include <glad/glad.h>
+#include <iostream>
 #include <fstream>
 #include <sstream>
-#include <iostream>
 
-Shader::Shader() {}
-Shader::~Shader() {
-    if (programID) glDeleteProgram(programID);
-}
-
-
-std::string Shader::readFile(const std::string& path) {
+static std::string readFile(const char* path) {
     std::ifstream in(path);
-    if (!in) {
-        std::cerr << "Failed to open shader file: " << path << std::endl;
-        return "";
+    if (!in.is_open()) {
+        std::cerr << "Failed to open shader file: " << path << "\n";
+        return {};
     }
-    std::stringstream ss; ss << in.rdbuf();
+    std::stringstream ss;
+    ss << in.rdbuf();
     return ss.str();
 }
 
-bool Shader::compileShader(const char* src, GLenum type, GLuint& out) {
-    out = glCreateShader(type);
-    glShaderSource(out, 1, &src, nullptr);
-    glCompileShader(out);
-    GLint ok = 0; glGetShaderiv(out, GL_COMPILE_STATUS, &ok);
-    if (!ok) {
-        GLint len = 0; glGetShaderiv(out, GL_INFO_LOG_LENGTH, &len);
-        std::string log(len, '\0');
-        glGetShaderInfoLog(out, len, nullptr, log.data());
-        std::cerr << "Shader compile error: " << log << std::endl;
+Shader::~Shader() {
+    if (ID) glDeleteProgram(ID);
+}
+
+static unsigned int compileShader(unsigned int type, const char* src) {
+    unsigned int id = glCreateShader(type);
+    glShaderSource(id, 1, &src, nullptr);
+    glCompileShader(id);
+
+    int success = 0;
+    glGetShaderiv(id, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char info[1024];
+        glGetShaderInfoLog(id, 1024, nullptr, info);
+        std::cerr << "Shader compile error: " << info << "\n";
+        glDeleteShader(id);
+        return 0;
+    }
+    return id;
+}
+
+bool Shader::loadFromFiles(const char* vertPath, const char* fragPath) {
+    std::string vcode = readFile(vertPath);
+    std::string fcode = readFile(fragPath);
+    if (vcode.empty() || fcode.empty()) return false;
+
+    unsigned int vs = compileShader(GL_VERTEX_SHADER, vcode.c_str());
+    unsigned int fs = compileShader(GL_FRAGMENT_SHADER, fcode.c_str());
+    if (!vs || !fs) return false;
+
+    ID = glCreateProgram();
+    glAttachShader(ID, vs);
+    glAttachShader(ID, fs);
+    glLinkProgram(ID);
+
+    int linked = 0;
+    glGetProgramiv(ID, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        char info[1024];
+        glGetProgramInfoLog(ID, 1024, nullptr, info);
+        std::cerr << "Program link error: " << info << "\n";
+        glDeleteProgram(ID);
+        ID = 0;
+        glDeleteShader(vs);
+        glDeleteShader(fs);
         return false;
     }
+
+    glDetachShader(ID, vs);
+    glDetachShader(ID, fs);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
     return true;
 }
 
-bool Shader::loadFromFiles(const std::string& vsPath, const std::string& fsPath) {
-    std::string vsSrc = readFile(vsPath);
-    std::string fsSrc = readFile(fsPath);
-    if (vsSrc.empty() || fsSrc.empty()) return false;
-
-
-    GLuint vs, fs;
-    if (!compileShader(vsSrc.c_str(), GL_VERTEX_SHADER, vs)) return false;
-    if (!compileShader(fsSrc.c_str(), GL_FRAGMENT_SHADER, fs)) { glDeleteShader(vs); return false; }
-
-
-    programID = glCreateProgram();
-    glAttachShader(programID, vs);
-    glAttachShader(programID, fs);
-    glLinkProgram(programID);
-
-
-    GLint ok = 0; glGetProgramiv(programID, GL_LINK_STATUS, &ok);
-    if (!ok) {
-        GLint len = 0; glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &len);
-        std::string log(len, '\0');
-        glGetProgramInfoLog(programID, len, nullptr, log.data());
-        std::cerr << "Program link error: " << log << std::endl;
-        glDeleteShader(vs); glDeleteShader(fs);
-        return false;
-    }
-
-
-    glDeleteShader(vs); glDeleteShader(fs);
-    return true;
+void Shader::use() const {
+    if (ID) glUseProgram(ID);
 }
 
-bool Shader::loadComputeFromFile(const std::string& csPath) {
-    std::string csSrc = readFile(csPath);
-    if (csSrc.empty()) return false;
-
-
-    GLuint cs;
-    if (!compileShader(csSrc.c_str(), GL_COMPUTE_SHADER, cs)) return false;
-
-
-    programID = glCreateProgram();
-    glAttachShader(programID, cs);
-    glLinkProgram(programID);
-
-
-    GLint ok = 0; glGetProgramiv(programID, GL_LINK_STATUS, &ok);
-    if (!ok) {
-        GLint len = 0; glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &len);
-        std::string log(len, '\0');
-        glGetProgramInfoLog(programID, len, nullptr, log.data());
-        std::cerr << "Compute program link error: " << log << std::endl;
-        glDeleteShader(cs);
-    return false;
-    }
-
-
-    glDeleteShader(cs);
-    return true;
+void Shader::setInt(const std::string &name, int value) const {
+    glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
 }
-
-
-void Shader::setInt(const std::string& name, int value) const {
-    GLint loc = glGetUniformLocation(programID, name.c_str());
-    if (loc != -1) glUniform1i(loc, value);
+void Shader::setFloat(const std::string &name, float value) const {
+    glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
 }
-
-void Shader::setFloat(const std::string& name, float value) const {
-    GLint loc = glGetUniformLocation(programID, name.c_str());
-    if (loc != -1) glUniform1f(loc, value);
-}
-
-void Shader::setVec2(const std::string& name, float x, float y) const {
-    GLint loc = glGetUniformLocation(programID, name.c_str());
-    if (loc != -1) glUniform2f(loc, x, y);
-}
-
-void Shader::setVec3(const std::string& name, float x, float y, float z) const {
-    GLint loc = glGetUniformLocation(programID, name.c_str());
-    if (loc != -1) glUniform3f(loc, x, y, z);
+void Shader::setVec3(const std::string &name, const glm::vec3 &v) const {
+    glUniform3f(glGetUniformLocation(ID, name.c_str()), v.x, v.y, v.z);
 }
