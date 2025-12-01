@@ -92,7 +92,7 @@ float rayMarch(vec3 ro, vec3 rd, out int steps, out bool hit, out float orbitTra
             return depth;
         }
 
-        depth += dist * 0.9;
+        depth += dist;
         
         if (depth >= MAX_DIST) {
             break;
@@ -117,9 +117,9 @@ vec3 calcNormal(vec3 p, float dist) {
 float calcSoftShadow(vec3 ro, vec3 rd, float mint, float maxt) {
     float res = 1.0;
     float t = mint;
-    float trap; // Dummy
+    float trap;
     
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 8; i++) {
         float h = sceneSDF(ro + rd * t, trap);
         
         if (h < 0.001) {
@@ -140,7 +140,7 @@ float calcSoftShadow(vec3 ro, vec3 rd, float mint, float maxt) {
 float calcAO(vec3 p, vec3 n) {
     float occ = 0.0;
     float sca = 1.0;
-    float trap; // Dummy
+    float trap;
     
     for (int i = 0; i < 5; i++) {
         float h = 0.001 + 0.15 * float(i) / 4.0;
@@ -221,10 +221,10 @@ vec3 calculateLighting(vec3 p, vec3 normal, vec3 rd, float ao) {
     return (ambient + diffuse + specular + rimColor + skyColor) * ao;
 }
 
+float tanHalfFov = tan(fov / 2.0);
+
 void main() {
     vec2 uv = (TexCoord * 2.0 - 1.0) * vec2(resolution.x / resolution.y, 1.0);
-    
-    float tanHalfFov = tan(fov / 2.0);
 
     vec3 color = vec3(0.0);
     float aaSize = 1.0 / resolution.y;
