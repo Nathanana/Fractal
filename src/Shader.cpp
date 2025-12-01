@@ -12,20 +12,17 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath) {
     const char* fShaderCode = fragmentCode.c_str();
     
     GLuint vertex, fragment;
-    
-    // Vertex shader
+
     vertex = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex, 1, &vShaderCode, NULL);
     glCompileShader(vertex);
     checkCompileErrors(vertex, "VERTEX");
-    
-    // Fragment shader
+
     fragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment, 1, &fShaderCode, NULL);
     glCompileShader(fragment);
     checkCompileErrors(fragment, "FRAGMENT");
-    
-    // Shader program
+
     ID = glCreateProgram();
     glAttachShader(ID, vertex);
     glAttachShader(ID, fragment);

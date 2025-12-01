@@ -10,52 +10,54 @@ uniform vec3 camUp;
 uniform float fov;
 uniform float time;
 uniform vec3 resolution;
+uniform float scale;
+uniform float adaptiveSpeed;
 
 uniform int maxIterations;
-uniform float power;
 uniform bool autoRotate;
 
-const int MAX_STEPS = 256;
+const int MAX_STEPS = 200;
 const float MIN_DIST = 0.0001;
 const float MAX_DIST = 100.0;
-const float EPSILON = 0.0001;
 
-// Mandelbulb distance estimator
-float mandelbulbDE(vec3 pos) {
+float mandelboxDE(vec3 pos, out float orbitTrap) {
     vec3 z = pos;
     float dr = 1.0;
-    float r = 0.0;
-    
+
+    const float scale = -1.5;
+    const float minRadius = 0.5;
+    const float fixedRadius = 2.25;
+
+    orbitTrap = 1000.0;
+
     for (int i = 0; i < maxIterations; i++) {
-        r = length(z);
-        
-        if (r > 2.0) break;
-        
-        // Convert to polar coordinates
-        float theta = acos(z.z / r);
-        float phi = atan(z.y, z.x);
-        dr = pow(r, power - 1.0) * power * dr + 1.0;
-        
-        // Scale and rotate the point
-        float zr = pow(r, power);
-        theta = theta * power;
-        phi = phi * power;
-        
-        // Convert back to cartesian coordinates
-        z = zr * vec3(
-            sin(theta) * cos(phi),
-            sin(phi) * sin(theta),
-            cos(theta)
-        );
-        z += pos;
+        z = clamp(z, -1.0, 1.0) * 2.0 - z;
+
+        float r2 = dot(z, z);
+
+        if (r2 < minRadius * minRadius) {
+            float t = (fixedRadius * fixedRadius) / (minRadius * minRadius);
+            z *= t;
+            dr *= t;
+        } else if (r2 < fixedRadius * fixedRadius) {
+            float t = (fixedRadius * fixedRadius) / r2;
+            z *= t;
+            dr *= t;
+        }
+
+        z = z * scale + pos;
+        dr = dr * abs(scale) + 1.0;
+
+        orbitTrap = min(orbitTrap,
+                        abs(z.x) + abs(z.y) + abs(z.z));
     }
-    
-    return 0.5 * log(r) * r / dr;
+
+    return length(z) / abs(dr);
 }
 
-// Scene distance function
-float sceneSDF(vec3 p) {
-    // Apply optional rotation for visual effect
+float sceneSDF(vec3 p, out float orbitTrap) {
+    vec3 objPos = p / scale;
+    
     if (autoRotate) {
         float angle = time * 0.1;
         float s = sin(angle);
@@ -65,142 +67,233 @@ float sceneSDF(vec3 p) {
             0.0, 1.0, 0.0,
             -s, 0.0, c
         );
-        p = rotY * p;
+        objPos = rotY * objPos;
     }
-    
-    return mandelbulbDE(p);
+
+    return mandelboxDE(objPos, orbitTrap) * scale;
 }
 
-// Ray marching function
-float rayMarch(vec3 ro, vec3 rd) {
+float rayMarch(vec3 ro, vec3 rd, out int steps, out bool hit, out float orbitTrap) {
     float depth = 0.0;
+    steps = 0;
+    hit = false;
+    orbitTrap = 1000.0;
     
     for (int i = 0; i < MAX_STEPS; i++) {
+        steps = i;
         vec3 p = ro + rd * depth;
-        float dist = sceneSDF(p);
+        float trap;
+        float dist = sceneSDF(p, trap);
         
-        if (dist < MIN_DIST * depth) {
+        orbitTrap = min(orbitTrap, trap);
+
+        if (dist < MIN_DIST) {
+            hit = true;
             return depth;
         }
-        
-        depth += dist * 0.5; // Conservative step
+
+        depth += dist * 0.9;
         
         if (depth >= MAX_DIST) {
-            return MAX_DIST;
+            break;
         }
     }
     
     return MAX_DIST;
 }
 
-// Calculate normal using tetrahedron technique
-vec3 calcNormal(vec3 p) {
-    vec2 e = vec2(EPSILON, 0.0);
+vec3 calcNormal(vec3 p, float dist) {
+    float eps = 0.001;
+    float trap;
+    
+    vec2 e = vec2(eps, 0.0);
     return normalize(vec3(
-        sceneSDF(p + e.xyy) - sceneSDF(p - e.xyy),
-        sceneSDF(p + e.yxy) - sceneSDF(p - e.yxy),
-        sceneSDF(p + e.yyx) - sceneSDF(p - e.yyx)
+        sceneSDF(p + e.xyy, trap) - sceneSDF(p - e.xyy, trap),
+        sceneSDF(p + e.yxy, trap) - sceneSDF(p - e.yxy, trap),
+        sceneSDF(p + e.yyx, trap) - sceneSDF(p - e.yyx, trap)
     ));
 }
 
-// Simple lighting
-vec3 calculateLighting(vec3 p, vec3 normal, vec3 rd) {
-    // Light position rotates around the scene
-    vec3 lightPos = vec3(sin(time * 0.5) * 5.0, 3.0, cos(time * 0.5) * 5.0);
-    vec3 lightDir = normalize(lightPos - p);
+float calcSoftShadow(vec3 ro, vec3 rd, float mint, float maxt) {
+    float res = 1.0;
+    float t = mint;
+    float trap; // Dummy
     
-    // Ambient
-    vec3 ambient = vec3(0.1, 0.1, 0.15);
+    for (int i = 0; i < 16; i++) {
+        float h = sceneSDF(ro + rd * t, trap);
+        
+        if (h < 0.001) {
+            return 0.0;
+        }
+        
+        res = min(res, 8.0 * h / t);
+        t += h;
+        
+        if (t > maxt) {
+            break;
+        }
+    }
     
-    // Diffuse
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * vec3(0.8, 0.7, 0.6);
-    
-    // Specular
-    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(-rd, reflectDir), 0.0), 32.0);
-    vec3 specular = spec * vec3(1.0, 1.0, 1.0) * 0.5;
-    
-    // Rim lighting
-    float rim = 1.0 - max(dot(-rd, normal), 0.0);
-    rim = pow(rim, 3.0);
-    vec3 rimColor = rim * vec3(0.2, 0.3, 0.5);
-    
-    // Ambient occlusion approximation
-    float ao = 1.0 - float(maxIterations) / 256.0 * 0.5;
-    
-    return (ambient + diffuse + specular + rimColor) * ao;
+    return clamp(res, 0.0, 1.0);
 }
 
-// Color based on distance and iterations
-vec3 getColor(vec3 p) {
-    float dist = length(p);
+float calcAO(vec3 p, vec3 n) {
+    float occ = 0.0;
+    float sca = 1.0;
+    float trap; // Dummy
     
-    // Create gradient based on distance
-    vec3 col1 = vec3(0.2, 0.3, 0.8);
-    vec3 col2 = vec3(0.8, 0.2, 0.5);
-    vec3 col3 = vec3(0.9, 0.7, 0.3);
-    
-    float t = fract(dist * 0.5);
-    vec3 baseColor;
-    
-    if (t < 0.5) {
-        baseColor = mix(col1, col2, t * 2.0);
-    } else {
-        baseColor = mix(col2, col3, (t - 0.5) * 2.0);
+    for (int i = 0; i < 5; i++) {
+        float h = 0.001 + 0.15 * float(i) / 4.0;
+        float d = sceneSDF(p + h * n, trap);
+        occ += (h - d) * sca;
+        sca *= 0.95;
+        
+        if (d < 0.0) break;
     }
+    
+    return clamp(1.0 - 2.5 * occ, 0.0, 1.0);
+}
+
+vec3 getColor(vec3 p, vec3 normal, float orbitTrap) {
+    float t = clamp(orbitTrap * 0.5, 0.0, 1.0);
+
+    vec3 col1 = vec3(0.1, 0.5, 0.9); // Bright blue
+    vec3 col2 = vec3(0.9, 0.3, 0.5); // Pink-red
+    vec3 col3 = vec3(0.2, 0.9, 0.6); // Cyan-green
+    vec3 col4 = vec3(0.9, 0.7, 0.2); // Orange-yellow
+    vec3 col5 = vec3(0.6, 0.2, 0.9); // Purple
+
+    vec3 baseColor;
+    if (t < 0.2) {
+        baseColor = mix(col1, col2, t * 5.0);
+    } else if (t < 0.4) {
+        baseColor = mix(col2, col3, (t - 0.2) * 5.0);
+    } else if (t < 0.6) {
+        baseColor = mix(col3, col4, (t - 0.4) * 5.0);
+    } else if (t < 0.8) {
+        baseColor = mix(col4, col5, (t - 0.6) * 5.0);
+    } else {
+        baseColor = mix(col5, col1, (t - 0.8) * 5.0);
+    }
+    
+    float normalVar = dot(normal, vec3(0.577)) * 0.5 + 0.5;
+    baseColor = mix(baseColor * 0.8, baseColor * 1.2, normalVar);
+
+    float sparkle = pow(abs(sin(p.x * 50.0) * sin(p.y * 50.0) * sin(p.z * 50.0)), 20.0);
+    baseColor += vec3(sparkle * 0.3);
     
     return baseColor;
 }
 
+vec3 calculateLighting(vec3 p, vec3 normal, vec3 rd, float ao) {
+    vec3 lightPos1 = vec3(sin(time * 0.3) * 10.0, 5.0, cos(time * 0.3) * 10.0);
+    vec3 lightPos2 = vec3(-5.0, 8.0, -5.0);
+    vec3 lightPos3 = vec3(5.0, -3.0, 8.0);
+    
+    vec3 lightDir1 = normalize(lightPos1 - p);
+    vec3 lightDir2 = normalize(lightPos2 - p);
+    vec3 lightDir3 = normalize(lightPos3 - p);
+    
+    float shadow1 = calcSoftShadow(p + normal * 0.002, lightDir1, 0.02, 10.0);
+    
+    vec3 ambient = vec3(0.2, 0.2, 0.25);
+    
+    float diff1 = max(dot(normal, lightDir1), 0.0);
+    float diff2 = max(dot(normal, lightDir2), 0.0);
+    float diff3 = max(dot(normal, lightDir3), 0.0);
+    
+    vec3 diffuse = vec3(0.0);
+    diffuse += diff1 * vec3(1.0, 0.95, 0.9) * 0.6 * shadow1;
+    diffuse += diff2 * vec3(0.9, 0.95, 1.0) * 0.4;
+    diffuse += diff3 * vec3(1.0, 0.9, 0.85) * 0.3;
+    
+    vec3 reflectDir1 = reflect(-lightDir1, normal);
+    float spec1 = pow(max(dot(-rd, reflectDir1), 0.0), 32.0);
+    vec3 specular = spec1 * vec3(1.0, 1.0, 1.0) * 0.4 * shadow1;
+    
+    float rim = 1.0 - max(dot(-rd, normal), 0.0);
+    rim = pow(rim, 4.0);
+    vec3 rimColor = rim * vec3(0.3, 0.5, 0.7) * 0.5;
+    
+    float skyLight = max(0.0, 0.5 + 0.5 * normal.y);
+    vec3 skyColor = vec3(0.3, 0.4, 0.6) * skyLight * 0.3;
+    
+    return (ambient + diffuse + specular + rimColor + skyColor) * ao;
+}
+
 void main() {
-    // Calculate ray direction
     vec2 uv = (TexCoord * 2.0 - 1.0) * vec2(resolution.x / resolution.y, 1.0);
     
     float tanHalfFov = tan(fov / 2.0);
-    vec3 rd = normalize(
-        camFront + 
-        camRight * uv.x * tanHalfFov +
-        camUp * uv.y * tanHalfFov
-    );
+
+    vec3 color = vec3(0.0);
+    float aaSize = 1.0 / resolution.y;
     
-    // Ray origin is the camera position
-    vec3 ro = camPos;
-    
-    // March the ray
-    float dist = rayMarch(ro, rd);
-    
-    vec3 color;
-    
-    if (dist < MAX_DIST) {
-        // Hit the fractal
-        vec3 p = ro + rd * dist;
-        vec3 normal = calcNormal(p);
-        vec3 baseColor = getColor(p);
-        vec3 lighting = calculateLighting(p, normal, rd);
-        
-        color = baseColor * lighting;
-        
-        // Add depth fog
-        float fogAmount = 1.0 - exp(-dist * 0.02);
-        vec3 fogColor = vec3(0.05, 0.05, 0.1);
-        color = mix(color, fogColor, fogAmount);
-        
-        // Add glow effect
-        float glow = exp(-dist * 0.1) * 0.3;
-        color += vec3(glow * 0.5, glow * 0.3, glow * 0.8);
-    } else {
-        // Background gradient
-        float t = uv.y * 0.5 + 0.5;
-        color = mix(vec3(0.05, 0.05, 0.1), vec3(0.01, 0.02, 0.05), t);
-        
-        // Add stars
-        vec2 starUV = uv * 50.0;
-        float star = step(0.99, fract(sin(dot(floor(starUV), vec2(12.9898, 78.233))) * 43758.5453));
-        color += vec3(star * 0.5);
+    for (int aaY = 0; aaY < 2; aaY++) {
+        for (int aaX = 0; aaX < 2; aaX++) {
+            vec2 offset = vec2(float(aaX), float(aaY)) * aaSize - aaSize * 0.5;
+            vec2 sampleUV = uv + offset;
+            
+            vec3 rd = normalize(
+                camFront + 
+                camRight * sampleUV.x * tanHalfFov +
+                camUp * sampleUV.y * tanHalfFov
+            );
+            
+            vec3 ro = camPos;
+            
+            int steps;
+            bool hit;
+            float orbitTrap;
+            float dist = rayMarch(ro, rd, steps, hit, orbitTrap);
+            
+            vec3 sampleColor;
+            
+            if (hit && dist < MAX_DIST) {
+                vec3 p = ro + rd * dist;
+                vec3 normal = calcNormal(p, dist);
+                
+                float ao = calcAO(p, normal);
+                vec3 baseColor = getColor(p, normal, orbitTrap);
+                vec3 lighting = calculateLighting(p, normal, rd, ao);
+                
+                sampleColor = baseColor * lighting;
+                
+                float depthFade = exp(-dist * 0.01);
+                sampleColor *= mix(0.5, 1.0, depthFade);
+                
+            } else {
+                vec3 worldDir = rd;
+                
+                vec2 starUV = vec2(
+                    atan(worldDir.z, worldDir.x),
+                    asin(worldDir.y)
+                ) * 10.0;
+                
+                float star = 0.0;
+                for (int i = 0; i < 3; i++) {
+                    vec2 gridUV = starUV * (float(i + 1) * 3.0);
+                    vec2 gridID = floor(gridUV);
+                    float hash = fract(sin(dot(gridID, vec2(12.9898, 78.233))) * 43758.5453);
+                    
+                    if (hash > 0.98) {
+                        vec2 cellUV = fract(gridUV) - 0.5;
+                        float d = length(cellUV);
+                        star += smoothstep(0.05, 0.0, d) * (hash - 0.98) * 50.0;
+                    }
+                }
+                
+                float gradient = pow(abs(worldDir.y) * 0.5 + 0.5, 2.0);
+                sampleColor = mix(vec3(0.01, 0.01, 0.02), vec3(0.02, 0.02, 0.05), gradient);
+                sampleColor += vec3(star) * vec3(1.0, 0.95, 0.9);
+            }
+            
+            color += sampleColor;
+        }
     }
     
-    // Gamma correction
+    color /= 4.0;
+
     color = pow(color, vec3(1.0 / 2.2));
     
     FragColor = vec4(color, 1.0);

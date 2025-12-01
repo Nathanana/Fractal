@@ -8,33 +8,31 @@
 #include "camera.h"
 
 #include <iostream>
+#include <cmath>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void mouseCallback(GLFWwindow* window, double xpos, double ypos);
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 
-// Settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 
-// Camera
 Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
-// Timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// Fractal parameters
-int maxIterations = 128;
-float power = 8.0f;
+int maxIterations = 16;
 bool autoRotate = false;
 
+glm::vec3 cameraMantissa = glm::vec3(0.0f, 0.0f, 5.0f);
+int cameraExponent = 0;
+
 int main() {
-    // Initialize GLFW
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
@@ -44,7 +42,6 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    // Create window
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Fractal Explorer - Mandelbulb", NULL, NULL);
     if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -56,19 +53,15 @@ int main() {
     glfwSetCursorPosCallback(window, mouseCallback);
     glfwSetScrollCallback(window, scrollCallback);
 
-    // Capture mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // Load OpenGL functions
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
-    // Build and compile shaders
     Shader shader("shaders/vertex.glsl", "shaders/fragment.glsl");
 
-    // Setup fullscreen quad
     float quadVertices[] = {
         -1.0f,  1.0f,  0.0f, 1.0f,
         -1.0f, -1.0f,  0.0f, 0.0f,
@@ -95,16 +88,22 @@ int main() {
     std::cout << "Space/Shift - Move up/down" << std::endl;
     std::cout << "Mouse - Look around" << std::endl;
     std::cout << "Scroll - Adjust speed" << std::endl;
+    std::cout << "Q/E - Zoom in/out" << std::endl;
     std::cout << "1/2 - Decrease/Increase iterations" << std::endl;
-    std::cout << "3/4 - Decrease/Increase power" << std::endl;
-    std::cout << "R - Toggle auto-rotate" << std::endl;
+    std::cout << "R - Toggle auto-rotate" << std::endl; 
     std::cout << "ESC - Exit" << std::endl;
+    std::cout << "\nStarting iterations: " << maxIterations << std::endl;
 
-    // Render loop
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        std::cout << "\rFPS: " << static_cast<int>(1.0f / deltaTime)
+          << " | Zoom Level: 2^" << cameraExponent
+          << " | Max Iterations: " << maxIterations
+          << " | Speed: " << camera.MovementSpeed
+          << std::flush;
 
         processInput(window);
 
@@ -112,26 +111,24 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         shader.use();
-        
-        // Pass camera data
-        shader.setVec3("camPos", camera.Position);
+
+        float scale = std::pow(2.0f, static_cast<float>(cameraExponent));
+        glm::vec3 worldPos = cameraMantissa * scale;
+
+        shader.setVec3("camPos", worldPos);
         shader.setVec3("camFront", camera.Front);
         shader.setVec3("camRight", camera.Right);
         shader.setVec3("camUp", camera.Up);
         shader.setFloat("fov", glm::radians(camera.Fov));
         shader.setFloat("time", currentFrame);
-        
-        // Pass screen dimensions
+        shader.setFloat("scale", scale); 
+
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         shader.setVec3("resolution", glm::vec3(width, height, 0.0f));
-        
-        // Pass fractal parameters
-        shader.setInt("maxIterations", maxIterations);
-        shader.setFloat("power", power);
-        shader.setBool("autoRotate", autoRotate);
 
-        // Render quad
+        shader.setInt("maxIterations", maxIterations);
+
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -150,66 +147,73 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    // Camera movement
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.processKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.processKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.processKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.processKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        camera.processKeyboard(UP, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-        camera.processKeyboard(DOWN, deltaTime);
+    glm::vec3 oldMantissa = cameraMantissa;
 
-    // Fractal controls
+    float velocity = camera.MovementSpeed * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraMantissa += camera.Front * velocity;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraMantissa -= camera.Front * velocity;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraMantissa -= camera.Right * velocity;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraMantissa += camera.Right * velocity;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        cameraMantissa += camera.Up * velocity;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        cameraMantissa -= camera.Up * velocity;
+
+    float mantissaLen = glm::length(cameraMantissa);
+    if (mantissaLen > 10.0f) {
+        cameraMantissa /= 2.0f;
+        cameraExponent += 1;
+    } else if (mantissaLen < 0.1f && mantissaLen > 0.001f) {
+        cameraMantissa *= 2.0f;
+        cameraExponent -= 1;
+    }
+
     static bool key1Pressed = false;
     static bool key2Pressed = false;
-    static bool key3Pressed = false;
-    static bool key4Pressed = false;
-    static bool keyRPressed = false;
+    static bool keyQPressed = false;
+    static bool keyEPressed = false;
+
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !keyEPressed) {
+        cameraExponent += 1;
+        camera.MinSpeed /= 2.0f;
+        camera.MaxSpeed /= 2.0f;
+        camera.MovementSpeed /= 2.0f;
+        
+        keyEPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE)
+        keyEPressed = false;
+
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS && !keyQPressed) {
+        cameraExponent -= 1;
+        camera.MinSpeed *= 2.0f;
+        camera.MaxSpeed *= 2.0f;
+        camera.MovementSpeed *= 2.0f;
+        
+        keyQPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_RELEASE)
+        keyQPressed = false;
 
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && !key1Pressed) {
-        maxIterations = std::max(8, maxIterations - 16);
-        std::cout << "Max Iterations: " << maxIterations << std::endl;
+        maxIterations = std::max(0, maxIterations - 1);
+        
         key1Pressed = true;
     }
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE)
         key1Pressed = false;
 
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && !key2Pressed) {
-        maxIterations = std::min(256, maxIterations + 16);
-        std::cout << "Max Iterations: " << maxIterations << std::endl;
+        maxIterations = std::min(256, maxIterations + 1);
+        
         key2Pressed = true;
     }
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE)
         key2Pressed = false;
-
-    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && !key3Pressed) {
-        power = std::max(2.0f, power - 1.0f);
-        std::cout << "Power: " << power << std::endl;
-        key3Pressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE)
-        key3Pressed = false;
-
-    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS && !key4Pressed) {
-        power = std::min(16.0f, power + 1.0f);
-        std::cout << "Power: " << power << std::endl;
-        key4Pressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_RELEASE)
-        key4Pressed = false;
-
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !keyRPressed) {
-        autoRotate = !autoRotate;
-        std::cout << "Auto-rotate: " << (autoRotate ? "ON" : "OFF") << std::endl;
-        keyRPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE)
-        keyRPressed = false;
 }
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
@@ -237,5 +241,4 @@ void mouseCallback(GLFWwindow* window, double xposIn, double yposIn) {
 
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     camera.processMouseScroll(static_cast<float>(yoffset));
-    std::cout << "Speed: " << camera.MovementSpeed << std::endl;
 }

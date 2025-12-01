@@ -49,21 +49,19 @@ void Camera::processMouseMovement(float xoffset, float yoffset, GLboolean constr
 }
 
 void Camera::processMouseScroll(float yoffset) {
-    const float scalingFactor = 1.1f;
+    const float scalingFactor = 1.3f;
 
     if (yoffset > 0) {
         MovementSpeed *= scalingFactor;
     } else if (yoffset < 0) {
         MovementSpeed /= scalingFactor;
     }
-    const float minSpeed = 0.0000001f;
-    const float maxSpeed = 50.0f;
 
-    if (MovementSpeed < minSpeed)
-        MovementSpeed = minSpeed;
+    if (MovementSpeed < MinSpeed)
+        MovementSpeed = MinSpeed;
     
-    if (MovementSpeed > maxSpeed)
-        MovementSpeed = maxSpeed;
+    if (MovementSpeed > MaxSpeed)
+        MovementSpeed = MaxSpeed;
 }
 
 void Camera::updateCameraVectors() {
