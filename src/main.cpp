@@ -30,7 +30,7 @@ int maxIterations = 16;
 bool autoRotate = false;
 
 glm::vec3 cameraMantissa = glm::vec3(0.0f, 0.0f, 5.0f);
-int cameraExponent = 0;
+int cameraExponent = -2;
 
 int main() {
     glfwInit();
@@ -90,7 +90,6 @@ int main() {
     std::cout << "Scroll - Adjust speed" << std::endl;
     std::cout << "Q/E - Zoom in/out" << std::endl;
     std::cout << "1/2 - Decrease/Increase iterations" << std::endl;
-    std::cout << "R - Toggle auto-rotate" << std::endl; 
     std::cout << "ESC - Exit" << std::endl;
     std::cout << "\nStarting iterations: " << maxIterations << std::endl;
 
