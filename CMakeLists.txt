@@ -1,51 +1,36 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.10)
 project(Fractal)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(OpenGL REQUIRED)
+include_directories(include)
 
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(external/glfw)
-
-add_subdirectory(external/glm)
-
-add_library(glad external/glad/src/glad.c)
-target_include_directories(glad PUBLIC external/glad/include)
+add_library(glad STATIC include/glad/src/glad.c)
+target_include_directories(glad PUBLIC include)
 
 set(SOURCES
     src/main.cpp
-    src/shader.cpp
     src/camera.cpp
+    src/shader.cpp
 )
 
-set(HEADERS
-    include/shader.h
-    include/camera.h
-)
+add_executable(Fractal ${SOURCES})
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    external/glad/include
-)
-
-target_link_libraries(${PROJECT_NAME}
-    OpenGL::GL
-    glfw
-    glm::glm
-    glad
-)
-
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+if(WIN32)
+    set(GLFW_INCLUDE_DIR "path/to/glfw/include")
+    set(GLFW_LIBRARY "path/to/glfw/lib/glfw3.lib")
+    include_directories(${GLFW_INCLUDE_DIR})
+    target_link_libraries(Fractal glad ${GLFW_LIBRARY} opengl32)
+elseif(APPLE)
+    find_package(PkgConfig REQUIRED)
+    pkg_search_module(GLFW REQUIRED glfw3)
+    include_directories(${GLFW_INCLUDE_DIRS})
+    link_directories(${GLFW_LIBRARY_DIRS})
+    target_link_libraries(Fractal glad ${GLFW_LIBRARIES} "-framework OpenGL")
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
+    find_package(PkgConfig REQUIRED)
+    pkg_search_module(GLFW REQUIRED glfw3)
+    include_directories(${GLFW_INCLUDE_DIRS})
+    link_directories(${GLFW_LIBRARY_DIRS})
+    target_link_libraries(Fractal glad ${GLFW_LIBRARIES} GL X11 pthread Xrandr Xi dl)
 endif()
