@@ -7,41 +7,26 @@ From wikipedia:
 In mathematics, a fractal is a geometric shape containing detailed structure at arbitrarily small scales, usually having a fractal dimension strictly exceeding the topological dimension.
 
 They are fascinating shapes which have often been used in construction and engineering as their weight typically scales slower with size when compared to simpler geometric shapes. They are also incredibly interesting as most of the time, the complexity arises from very simple equations. In this case, I've rendered a Mandelbox, which is formed by the following rules:
-Given a point \( \mathbf{z} \in \mathbb{R}^3 \), each iteration does:
-1. **Box fold**  
-   For each coordinate \( z_i \):
-
-   $$
-   z_i =
-   \begin{cases}
-     2 - z_i & z_i > 1 \\
-     -2 - z_i & z_i < -1 \\
-     z_i & \text{otherwise}
-   \end{cases}
-   $$
-
-2. **Sphere fold**
-
-   Let $r = \|\mathbf{z}\|$. Then:
-
-   $$
-   \mathbf{z} =
-   \begin{cases}
-     \mathbf{z} \cdot \frac{R^2}{r^2} & r < R_{\text{min}} \\
-     \mathbf{z} \cdot \frac{1}{r^2} & r < 1 \\
-     \mathbf{z} & \text{otherwise}
-   \end{cases}
-   $$
-
-3. **Scale and offset**
-
-   $$
-   \mathbf{z} = s\,\mathbf{z} + \mathbf{c}
-   $$
-
-Typical constants:  
-`s \approx 2`, `R_{\text{min}} \approx 0.5`, `R = 1`.  
-In my case I used `s = 1.5`, `R_{\text{min}} = 0.5`, and `R = 2.25` for a more interesting look while keeping things computationally light.
+$$
+\textbf{Box fold: For each coordinate } z_i,\;
+z_i =
+\begin{cases}
+ 2 - z_i & z_i > 1 \\
+ -2 - z_i & z_i < -1 \\
+ z_i & \text{otherwise}
+\end{cases}
+\\[1.2em]
+\textbf{Sphere fold: Let } r = \lVert \mathbf{z} \rVert,\;
+\mathbf{z} =
+\begin{cases}
+ \mathbf{z} \cdot \dfrac{R^2}{r^2} & r < R_{\min} \\
+ \mathbf{z} \cdot \dfrac{1}{r^2} & r < 1 \\
+ \mathbf{z} & \text{otherwise}
+\end{cases}
+\\[1.2em]
+\textbf{Scale and offset:}\quad
+\mathbf{z} = s\,\mathbf{z} + \mathbf{c}
+$$
 
 Other cool 3D fractals include the Mandelbulb, Menger sponge, Sierpinski tetrahedron, Quaternion Julia sets, and Kaleidoscopic IFS. I might add support for them later, but I’m happy with where the project is right now.
 
