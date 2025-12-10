@@ -40,8 +40,8 @@ Given a point \( \mathbf{z} \in \mathbb{R}^3 \), each iteration does:
    $$
 
 Typical constants:  
-\( s \approx 2 \), \( R_{\text{min}} \approx 0.5 \), \( R = 1 \).  
-In my case I used \( s = 1.5 \), \( R_{\text{min}} = 0.5 \), and \( R = 2.25 \) for a more interesting look while keeping things computationally light.
+`s \approx 2`, `R_{\text{min}} \approx 0.5`, `R = 1`.  
+In my case I used `s = 1.5`, `R_{\text{min}} = 0.5`, and `R = 2.25` for a more interesting look while keeping things computationally light.
 
 Other cool 3D fractals include the Mandelbulb, Menger sponge, Sierpinski tetrahedron, Quaternion Julia sets, and Kaleidoscopic IFS. I might add support for them later, but I’m happy with where the project is right now.
 
