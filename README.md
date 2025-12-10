@@ -22,7 +22,7 @@ Given a point \( \mathbf{z} \in \mathbb{R}^3 \), each iteration does:
 
 2. **Sphere fold**
 
-   Let \( r = \|\mathbf{z}\| \). Then:
+   Let $r = \|\mathbf{z}\|$. Then:
 
    $$
    \mathbf{z} =
