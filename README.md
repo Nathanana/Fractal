@@ -8,37 +8,43 @@ In mathematics, a fractal is a geometric shape containing detailed structure at 
 
 They are fascinating shapes which have often been used in construction and engineering as their weight typically scales slower with size when compared to simpler geometric shapes. They are also incredibly interesting as most of the time, the complexity arises from very simple equations. In this case, I've rendered a Mandelbox, which is formed by the following rules:
 Given a point \( \mathbf{z} \in \mathbb{R}^3 \), each iteration does:
-
 1. **Box fold**  
    For each coordinate \( z_i \):
-   \[
+
+   $$
    z_i =
    \begin{cases}
-   2 - z_i & z_i > 1 \\
-   -2 - z_i & z_i < -1 \\
-   z_i & \text{otherwise}
+     2 - z_i & z_i > 1 \\
+     -2 - z_i & z_i < -1 \\
+     z_i & \text{otherwise}
    \end{cases}
-   \]
+   $$
 
-2. **Sphere fold**  
+2. **Sphere fold**
+
    Let \( r = \|\mathbf{z}\| \). Then:
-   \[
+
+   $$
    \mathbf{z} =
    \begin{cases}
-   \mathbf{z} \cdot \frac{R^2}{r^2} & r < R_{\text{min}} \\
-   \mathbf{z} \cdot \frac{1}{r^2} & r < 1 \\
-   \mathbf{z} & \text{otherwise}
+     \mathbf{z} \cdot \frac{R^2}{r^2} & r < R_{\text{min}} \\
+     \mathbf{z} \cdot \frac{1}{r^2} & r < 1 \\
+     \mathbf{z} & \text{otherwise}
    \end{cases}
-   \]
+   $$
 
-3. **Scale and offset**  
-   \[
+3. **Scale and offset**
+
+   $$
    \mathbf{z} = s\,\mathbf{z} + \mathbf{c}
-   \]
+   $$
 
-Typical constants: \( s \approx 2 \), \( R_{\text{min}} \approx 0.5 \), \( R = 1 \). In my case I gave \( s = 1.5 \), \( R_{\text{min}} = 0.5 \), and \(R = 2.25 \) for a relatively interesting look while keeping things computationally lax.
+Typical constants:  
+\( s \approx 2 \), \( R_{\text{min}} \approx 0.5 \), \( R = 1 \).  
+In my case I used \( s = 1.5 \), \( R_{\text{min}} = 0.5 \), and \( R = 2.25 \) for a more interesting look while keeping things computationally light.
 
-Other cool 3D fractals are the Mandelbulb, Menger sponge, Sierpinski tetrahedron, Quaternion Julia sets, and Kaleidoscopic IFS. In the future I may add the functionality to view them as well, but I like where the project is at now.
+Other cool 3D fractals include the Mandelbulb, Menger sponge, Sierpinski tetrahedron, Quaternion Julia sets, and Kaleidoscopic IFS. I might add support for them later, but I’m happy with where the project is right now.
+
 
 <img width="1183" height="1075" alt="Screenshot 2025-12-02 142428" src="https://github.com/user-attachments/assets/6712817f-5a91-49f6-a116-e4b8179999c9" />
 <img width="1886" height="1007" alt="image" src="https://github.com/user-attachments/assets/5372030f-f00c-4c4c-aca7-1f94fb266603" />
