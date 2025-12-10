@@ -2,31 +2,11 @@
 
 C++ OpenGL application for exploring the Mandelbox fractal with true infinite zoom using log-domain coordinates and adaptive detail scaling.
 
-From wikipedia: 
+From Wikipedia: 
 
 In mathematics, a fractal is a geometric shape containing detailed structure at arbitrarily small scales, usually having a fractal dimension strictly exceeding the topological dimension.
 
-They are fascinating shapes which have often been used in construction and engineering as their weight typically scales slower with size when compared to simpler geometric shapes. They are also incredibly interesting as most of the time, the complexity arises from very simple equations. In this case, I've rendered a Mandelbox, which is formed by the following rules:
-$$
-\textbf{Box fold: For each coordinate } z_i,\;
-z_i =
-\begin{cases}
- 2 - z_i & z_i > 1 \\
- -2 - z_i & z_i < -1 \\
- z_i & \text{otherwise}
-\end{cases}
-\\[1.2em]
-\textbf{Sphere fold: Let } r = \lVert \mathbf{z} \rVert,\;
-\mathbf{z} =
-\begin{cases}
- \mathbf{z} \cdot \dfrac{R^2}{r^2} & r < R_{\min} \\
- \mathbf{z} \cdot \dfrac{1}{r^2} & r < 1 \\
- \mathbf{z} & \text{otherwise}
-\end{cases}
-\\[1.2em]
-\textbf{Scale and offset:}\quad
-\mathbf{z} = s\,\mathbf{z} + \mathbf{c}
-$$
+They are fascinating shapes which have often been used in construction and engineering as their weight typically scales slower with size when compared to simpler geometric shapes. They are also incredibly interesting as most of the time, the complexity arises from very simple equations. In this case, I've rendered a Mandelbox. For more info on the Mandelbox, check out [this video](https://sites.google.com/site/mandelbox/what-is-a-mandelbox)
 
 Other cool 3D fractals include the Mandelbulb, Menger sponge, Sierpinski tetrahedron, Quaternion Julia sets, and Kaleidoscopic IFS. I might add support for them later, but I’m happy with where the project is right now.
 
