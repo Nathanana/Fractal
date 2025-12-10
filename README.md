@@ -18,7 +18,6 @@ Other cool 3D fractals include the Mandelbulb, Menger sponge, Sierpinski tetrahe
 ## Features
 
 - **True Infinite Zoom**: Log-domain coordinate system (mantissa + exponent) enables exploration at any scale
-- **Adaptive Detail**: Iteration count automatically increases as you approach the fractal surface
 - **Real-time Ray Marching**: GPU-accelerated distance estimation rendering
 - **Smooth Navigation**: Camera speed automatically adjusts based on zoom level
 - **Beautiful Rendering**: 2x2 anti-aliasing, orbit trap coloring, soft shadows, ambient occlusion
@@ -116,15 +115,14 @@ xcode-select --install
 - **E** - Zoom IN
 
 ### Quality
-- **1** - Decrease base iteration count (faster, less detail)
-- **2** - Increase base iteration count (slower, more detail)
+- **1** - Decrease base iteration count
+- **2** - Increase base iteration count
+- If the solid starts to look like you can see through it, try increasing iterations. This can increase performance by stopping rays from penetrating the surface.
 
-### Other
-- **R** - Toggle auto-rotation
 - **ESC** - Exit
 
-### On-Screen Display
-The title bar shows real-time stats:
+### Terminal
+The terminal shows:
 - **FPS**: Current frame rate
 - **Zoom Level**: Current exponent (2^N scale)
 - **Max Iterations**: Current base iteration count
