@@ -117,7 +117,8 @@ xcode-select --install
 ### Quality
 - **1** - Decrease base iteration count
 - **2** - Increase base iteration count
-- If the solid starts to look like you can see through it, try increasing iterations. This can increase performance by stopping rays from penetrating the surface.
+```If the solid starts to look like you can see through it, try increasing iterations. This can increase performance by stopping rays from penetrating the surface.```
+
 
 - **ESC** - Exit
 
