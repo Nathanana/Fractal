@@ -13,6 +13,7 @@ Other cool 3D fractals include the Mandelbulb, Menger sponge, Sierpinski tetrahe
 
 <img width="1183" height="1075" alt="Screenshot 2025-12-02 142428" src="https://github.com/user-attachments/assets/6712817f-5a91-49f6-a116-e4b8179999c9" />
 <img width="1886" height="1007" alt="image" src="https://github.com/user-attachments/assets/5372030f-f00c-4c4c-aca7-1f94fb266603" />
+![FractalDemo-ezgif com-cut](https://github.com/user-attachments/assets/77e28a15-d4fd-4316-bece-0f6ee70e437c)
 
 
 ## Features
@@ -34,7 +35,7 @@ Other cool 3D fractals include the Mandelbulb, Menger sponge, Sierpinski tetrahe
 
 ### Installing GLFW
 
-#### Linux (Ubuntu/Debian)
+#### Linux (Haven't tested)
 ```bash
 sudo apt-get update
 sudo apt-get install libglfw3-dev
@@ -43,6 +44,7 @@ sudo apt-get install libglfw3-dev
 #### macOS
 ```bash
 brew install glfw
+brew install glm
 ```
 
 #### Windows
@@ -67,7 +69,7 @@ cmake ..
 make  # or 'cmake --build .'
 
 # Run
-./FractalExplorer
+./Fractal
 ```
 
 #### Windows (Visual Studio)
@@ -78,7 +80,7 @@ mkdir build
 cd build
 cmake .. -G "Visual Studio 16 2019" -A x64
 cmake --build . --config Release
-Release\FractalExplorer.exe
+Release\Fractal.exe
 ```
 
 If using vcpkg on Windows:
@@ -137,17 +139,9 @@ The terminal shows:
 4. **Adjust Speed**: If moving too fast/slow, use mouse scroll wheel, it should automatically adjust as you increase detail
 5. **Fine-tune Quality**: Press 1/2 to adjust base iteration count (start at 12-24)
 
-### Interesting Features to Find
-- **Cubic structures** - The Mandelbox has distinct box-like formations
-- **Spherical inversions** - Look for rounded bulges and indentations
-- **Self-similarity** - Structures repeat at different scales
-- **Fine tendrils** - Zoom in close to see intricate details
-- **Colorful patterns** - Orbit trap coloring reveals beautiful gradients
-
 ### Limitations/To Do
-- Performance is still not great- requires a pretty good GPU, looking into a number of optimization techniques
 - Floating point precision means that infinite zoom is impossible, could be fixed using Perturbation Theory techniques
-- It would be nice to have the zoom automatically adjust, still brainstorming
+- It would be nice to have the zoom automatically adjust
 
 ## Performance Tips
 
