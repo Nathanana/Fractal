@@ -13,8 +13,6 @@ Other cool 3D fractals include the Mandelbulb, Menger sponge, Sierpinski tetrahe
 
 <img width="1183" height="1075" alt="Screenshot 2025-12-02 142428" src="https://github.com/user-attachments/assets/6712817f-5a91-49f6-a116-e4b8179999c9" />
 <img width="1886" height="1007" alt="image" src="https://github.com/user-attachments/assets/5372030f-f00c-4c4c-aca7-1f94fb266603" />
-![FractalDemo-ezgif com-cut](https://github.com/user-attachments/assets/77e28a15-d4fd-4316-bece-0f6ee70e437c)
-
 
 ## Features
 
