@@ -3,6 +3,10 @@ project(Fractal)
 
 set(CMAKE_CXX_STANDARD 17)
 
+if(DEFINED ENV{VCPKG_ROOT})
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+endif()
+
 include_directories(include)
 
 add_library(glad STATIC include/glad/src/glad.c)
@@ -17,20 +21,20 @@ set(SOURCES
 add_compile_definitions(SHADER_PATH="${CMAKE_SOURCE_DIR}/shaders/")
 add_executable(Fractal ${SOURCES})
 
+file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR}/Release)
+
+find_package(glfw3 CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+
+target_link_libraries(Fractal glad glfw)
+
 if(WIN32)
-    set(GLFW_INCLUDE_DIR "path/to/glfw/include")
-    set(GLFW_LIBRARY "path/to/glfw/lib/glfw3.lib")
-    include_directories(${GLFW_INCLUDE_DIR})
-    target_link_libraries(Fractal glad ${GLFW_LIBRARY} opengl32)
+    target_link_libraries(Fractal opengl32)
 elseif(APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_search_module(GLFW REQUIRED glfw3)
     include_directories(${GLFW_INCLUDE_DIRS})
     target_link_libraries(Fractal glad "-L/opt/homebrew/Cellar/glfw/3.4/lib" "-lglfw" "-framework OpenGL")
 else()
-    find_package(PkgConfig REQUIRED)
-    pkg_search_module(GLFW REQUIRED glfw3)
-    include_directories(${GLFW_INCLUDE_DIRS})
-    link_directories(${GLFW_LIBRARY_DIRS})
-    target_link_libraries(Fractal glad ${GLFW_LIBRARIES} GL X11 pthread Xrandr Xi dl)
+    target_link_libraries(Fractal GL X11 pthread Xrandr Xi dl)
 endif()
