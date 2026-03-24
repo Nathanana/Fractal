@@ -15,8 +15,8 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos);
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 
-const unsigned int SCR_WIDTH = 1920;
-const unsigned int SCR_HEIGHT = 1080;
+const unsigned int SCR_WIDTH = 960;
+const unsigned int SCR_HEIGHT = 540;
 
 Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
 float lastX = SCR_WIDTH / 2.0f;
@@ -35,7 +35,7 @@ int cameraExponent = -2;
 int main() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -60,7 +60,7 @@ int main() {
         return -1;
     }
 
-    Shader shader("shaders/vertex.glsl", "shaders/fragment.glsl");
+    Shader shader(SHADER_PATH "vertex.glsl", SHADER_PATH "fragment.glsl");
 
     float quadVertices[] = {
         -1.0f,  1.0f,  0.0f, 1.0f,

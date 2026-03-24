@@ -14,6 +14,7 @@ set(SOURCES
     src/shader.cpp
 )
 
+add_compile_definitions(SHADER_PATH="${CMAKE_SOURCE_DIR}/shaders/")
 add_executable(Fractal ${SOURCES})
 
 if(WIN32)
@@ -25,8 +26,7 @@ elseif(APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_search_module(GLFW REQUIRED glfw3)
     include_directories(${GLFW_INCLUDE_DIRS})
-    link_directories(${GLFW_LIBRARY_DIRS})
-    target_link_libraries(Fractal glad ${GLFW_LIBRARIES} "-framework OpenGL")
+    target_link_libraries(Fractal glad "-L/opt/homebrew/Cellar/glfw/3.4/lib" "-lglfw" "-framework OpenGL")
 else()
     find_package(PkgConfig REQUIRED)
     pkg_search_module(GLFW REQUIRED glfw3)

@@ -1,4 +1,4 @@
-#version 460 core
+#version 410 core
 
 in vec2 TexCoord;
 out vec4 FragColor;
@@ -16,8 +16,8 @@ uniform float adaptiveSpeed;
 uniform int maxIterations;
 uniform bool autoRotate;
 
-const int MAX_STEPS = 200;
-const float MIN_DIST = 0.0001;
+const int MAX_STEPS = 80;
+const float MIN_DIST = 0.001;
 const float MAX_DIST = 100.0;
 
 float mandelboxDE(vec3 pos, out float orbitTrap) {
@@ -119,7 +119,7 @@ float calcSoftShadow(vec3 ro, vec3 rd, float mint, float maxt) {
     float t = mint;
     float trap;
     
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 4; i++) {
         float h = sceneSDF(ro + rd * t, trap);
         
         if (h < 0.001) {
@@ -142,7 +142,7 @@ float calcAO(vec3 p, vec3 n) {
     float sca = 1.0;
     float trap;
     
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
         float h = 0.001 + 0.15 * float(i) / 4.0;
         float d = sceneSDF(p + h * n, trap);
         occ += (h - d) * sca;
@@ -226,73 +226,59 @@ float tanHalfFov = tan(fov / 2.0);
 void main() {
     vec2 uv = (TexCoord * 2.0 - 1.0) * vec2(resolution.x / resolution.y, 1.0);
 
-    vec3 color = vec3(0.0);
-    float aaSize = 1.0 / resolution.y;
-    
-    for (int aaY = 0; aaY < 2; aaY++) {
-        for (int aaX = 0; aaX < 2; aaX++) {
-            vec2 offset = vec2(float(aaX), float(aaY)) * aaSize - aaSize * 0.5;
-            vec2 sampleUV = uv + offset;
+    vec3 rd = normalize(
+        camFront + 
+        camRight * uv.x * tanHalfFov +
+        camUp * uv.y * tanHalfFov
+    );
+
+    vec3 ro = camPos;
+
+    int steps;
+    bool hit;
+    float orbitTrap;
+    float dist = rayMarch(ro, rd, steps, hit, orbitTrap);
+
+    vec3 color;
+
+    if (hit && dist < MAX_DIST) {
+        vec3 p = ro + rd * dist;
+        vec3 normal = calcNormal(p, dist);
+        
+        float ao = calcAO(p, normal);
+        vec3 baseColor = getColor(p, normal, orbitTrap);
+        vec3 lighting = calculateLighting(p, normal, rd, ao);
+        
+        color = baseColor * lighting;
+        
+        float depthFade = exp(-dist * 0.01);
+        color *= mix(0.5, 1.0, depthFade);
+        
+    } else {
+        vec3 worldDir = rd;
+        
+        vec2 starUV = vec2(
+            atan(worldDir.z, worldDir.x),
+            asin(worldDir.y)
+        ) * 10.0;
+        
+        float star = 0.0;
+        for (int i = 0; i < 3; i++) {
+            vec2 gridUV = starUV * (float(i + 1) * 3.0);
+            vec2 gridID = floor(gridUV);
+            float hash = fract(sin(dot(gridID, vec2(12.9898, 78.233))) * 43758.5453);
             
-            vec3 rd = normalize(
-                camFront + 
-                camRight * sampleUV.x * tanHalfFov +
-                camUp * sampleUV.y * tanHalfFov
-            );
-            
-            vec3 ro = camPos;
-            
-            int steps;
-            bool hit;
-            float orbitTrap;
-            float dist = rayMarch(ro, rd, steps, hit, orbitTrap);
-            
-            vec3 sampleColor;
-            
-            if (hit && dist < MAX_DIST) {
-                vec3 p = ro + rd * dist;
-                vec3 normal = calcNormal(p, dist);
-                
-                float ao = calcAO(p, normal);
-                vec3 baseColor = getColor(p, normal, orbitTrap);
-                vec3 lighting = calculateLighting(p, normal, rd, ao);
-                
-                sampleColor = baseColor * lighting;
-                
-                float depthFade = exp(-dist * 0.01);
-                sampleColor *= mix(0.5, 1.0, depthFade);
-                
-            } else {
-                vec3 worldDir = rd;
-                
-                vec2 starUV = vec2(
-                    atan(worldDir.z, worldDir.x),
-                    asin(worldDir.y)
-                ) * 10.0;
-                
-                float star = 0.0;
-                for (int i = 0; i < 3; i++) {
-                    vec2 gridUV = starUV * (float(i + 1) * 3.0);
-                    vec2 gridID = floor(gridUV);
-                    float hash = fract(sin(dot(gridID, vec2(12.9898, 78.233))) * 43758.5453);
-                    
-                    if (hash > 0.98) {
-                        vec2 cellUV = fract(gridUV) - 0.5;
-                        float d = length(cellUV);
-                        star += smoothstep(0.05, 0.0, d) * (hash - 0.98) * 50.0;
-                    }
-                }
-                
-                float gradient = pow(abs(worldDir.y) * 0.5 + 0.5, 2.0);
-                sampleColor = mix(vec3(0.01, 0.01, 0.02), vec3(0.02, 0.02, 0.05), gradient);
-                sampleColor += vec3(star) * vec3(1.0, 0.95, 0.9);
+            if (hash > 0.98) {
+                vec2 cellUV = fract(gridUV) - 0.5;
+                float d = length(cellUV);
+                star += smoothstep(0.05, 0.0, d) * (hash - 0.98) * 50.0;
             }
-            
-            color += sampleColor;
         }
+        
+        float gradient = pow(abs(worldDir.y) * 0.5 + 0.5, 2.0);
+        color = mix(vec3(0.01, 0.01, 0.02), vec3(0.02, 0.02, 0.05), gradient);
+        color += vec3(star) * vec3(1.0, 0.95, 0.9);
     }
-    
-    color /= 4.0;
 
     color = pow(color, vec3(1.0 / 2.2));
     
