@@ -14,13 +14,7 @@ Other cool 3D fractals include the Mandelbulb, Menger sponge, Sierpinski tetrahe
 <img width="1183" height="1075" alt="Screenshot 2025-12-02 142428" src="https://github.com/user-attachments/assets/6712817f-5a91-49f6-a116-e4b8179999c9" />
 <img width="1886" height="1007" alt="image" src="https://github.com/user-attachments/assets/5372030f-f00c-4c4c-aca7-1f94fb266603" />
 
-## Features
-
-- **True Infinite Zoom**: Log-domain coordinate system (mantissa + exponent) enables exploration at any scale
-- **Real-time Ray Marching**: GPU-accelerated distance estimation rendering
-- **Smooth Navigation**: Camera speed automatically adjusts based on zoom level
-- **Beautiful Rendering**: 2x2 anti-aliasing, orbit trap coloring, soft shadows, ambient occlusion
-- **Fixed Starfield**: Non-rotating background for consistent spatial reference
+I built this in order to learn more about OpenGL while being able to explore fractals and learn a little bit about their equations. I wasn't happy with fractal explorers I found online, which were often not real time or not very precise. I also get the added benefit of learning more about them this way.
 
 ### Prerequisites
 
